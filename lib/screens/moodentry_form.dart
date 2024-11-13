@@ -1,5 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:mental_health_tracker_mobile/widgets/left_drawer.dart'; // Import the drawer
+import 'package:provider/provider.dart';
+import 'package:pbp_django_auth/pbp_django_auth.dart';
+import 'dart:convert';
+import 'package:mental_health_tracker_mobile/screens/menu.dart';
+
 
 class MoodEntryFormPage extends StatefulWidget {
   const MoodEntryFormPage({super.key});
@@ -50,6 +55,8 @@ class _MoodEntryFormPageState extends State<MoodEntryFormPage> {
 
   @override
   Widget build(BuildContext context) {
+    final request = context.watch<CookieRequest>();
+    
     return Scaffold(
       appBar: AppBar(
         title: const Center(
@@ -149,12 +156,38 @@ class _MoodEntryFormPageState extends State<MoodEntryFormPage> {
                         Theme.of(context).colorScheme.primary,
                       ),
                     ),
-                    onPressed: () {
-                      // Check if the form is valid before showing the dialog
-                      if (_formKey.currentState!.validate()) {
-                        _showDialog(); // Show the dialog if the form is valid
-                      }
+                    onPressed: () async {
+                        if (_formKey.currentState!.validate()) {
+                            // Send request to Django and wait for the response
+                            // TODO: Change the URL to your Django app's URL. Don't forget to add the trailing slash (/) if needed.
+                            final response = await request.postJson(
+                                "http://localhost:8000/create-flutter/",
+                                jsonEncode(<String, String>{
+                                    'mood': _mood,
+                                    'mood_intensity': _moodIntensity.toString(),
+                                    'feelings': _feelings,
+                                    // TODO: Adjust the fields with your project
+                                }),
+                            );
+                            
+                            if (context.mounted) {
+                                if (response['status'] == 'success') {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(content: Text("New mood has been saved successfully!")),
+                                    );
+                                    Navigator.pushReplacement(
+                                        context,
+                                        MaterialPageRoute(builder: (context) => MyHomePage()),
+                                    );
+                                } else {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(content: Text("Something went wrong, please try again.")),
+                                    );
+                                }
+                            }
+                        }
                     },
+
                     child: const Text(
                       "Save",
                       style: TextStyle(color: Colors.white),

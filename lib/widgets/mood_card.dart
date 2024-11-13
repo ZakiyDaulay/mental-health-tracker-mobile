@@ -1,12 +1,17 @@
 import 'package:flutter/material.dart';
-import 'package:mental_health_tracker_mobile/widgets/left_drawer.dart';
+import 'package:provider/provider.dart';
+import 'package:pbp_django_auth/pbp_django_auth.dart';
+import 'package:mental_health_tracker_mobile/screens/list_moodentry.dart';
 import 'package:mental_health_tracker_mobile/screens/moodentry_form.dart';
+import 'package:mental_health_tracker_mobile/screens/login.dart'; // Add this line if LoginPage is in a separate file
+
 class ItemHomepage {
   final String name;
   final IconData icon;
 
   ItemHomepage(this.name, this.icon);
 }
+
 class ItemCard extends StatelessWidget {
   final ItemHomepage item;
 
@@ -14,11 +19,13 @@ class ItemCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final request = context.watch<CookieRequest>();
+
     return Material(
       color: Theme.of(context).colorScheme.secondary,
       borderRadius: BorderRadius.circular(12),
       child: InkWell(
-        onTap: () {
+        onTap: () async {
           ScaffoldMessenger.of(context)
             ..hideCurrentSnackBar()
             ..showSnackBar(
@@ -32,9 +39,35 @@ class ItemCard extends StatelessWidget {
               context,
               MaterialPageRoute(builder: (context) => const MoodEntryFormPage()),
             );
+          } else if (item.name == "View Mood") {
+            // Navigate to MoodEntryPage
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const MoodEntryPage()),
+            );
+          } else if (item.name == "Logout") {
+            // Perform logout process asynchronously
+            final response = await request.logout(
+              "http://localhost:8000/auth/logout/" // Replace with your actual URL
+            );
+            String message = response["message"];
+            if (context.mounted) {
+              if (response['status']) {
+                String uname = response["username"];
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text("$message Goodbye, $uname."))
+                );
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (context) => const LoginPage()),
+                );
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text(message))
+                );
+              }
+            }
           }
-          // Add any other routes if needed, for example:
-          // else if (item.name == "Logout") { ... }
         },
         child: Container(
           padding: const EdgeInsets.all(8),
